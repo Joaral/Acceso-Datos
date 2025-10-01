@@ -1,0 +1,3 @@
+﻿  Entierro_Loader_0.5.cpp
+C:\Users\JoanArizaAlvarez\AccesoDatos\programas\Entierro_LoaderSOL\Entierro_Loader_0.5\Entierro_Loader_0.5.cpp(8,18): warning C4305: 'initializing': truncation from 'double' to 'float'
+  Entierro_Loader_0.5.vcxproj -> C:\Users\JoanArizaAlvarez\AccesoDatos\programas\Entierro_LoaderSOL\x64\Debug\Entierro_Loader_0.5.exe
