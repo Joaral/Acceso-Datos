@@ -16,12 +16,25 @@ int sizeW = -1;
 int sizeH = -1;
 
 int minTexture = 1;
-int textures = -1;
+int fileTextures = -1;
 
 char textChar;
 string textName;
 
 map<char, string> textures;
+
+
+
+
+
+void  print_map(char** map) {
+    for (int i = 0; i < sizeH; i++) {
+        for (int j = 0; j < sizeW; j++) {
+            cout << map[i][j];
+        }
+        cout << endl;
+    }
+}
 
 int main()
 {
@@ -103,6 +116,8 @@ int main()
     }
     
     getline(levelFile, tmp, ';');
+    fileTextures = stoi(tmp);
+
     
     if (stoi(tmp) < minTexture) {
         cout << "ERROR 8.2: El archivo no supera el minimo de texturas." << endl;
@@ -110,10 +125,9 @@ int main()
     }
 
     getline(levelFile, tmp, '\n');
+    
 
-    textures = stoi(tmp);
-
-    for (int i = 0; i <= textures; i++) {
+    for (int i = 0; i < fileTextures; i++) {
 
         getline(levelFile, tmp, ';');
 
@@ -131,6 +145,107 @@ int main()
         
     }
 
+    //FLOOR
+    getline(levelFile, tmp, ';');
+
+    if (tmp != "FLOOR") {
+        cout << "ERROR 10: Suelo mal formado." << endl;
+        return 8;
+    }
+    cout << tmp << endl;
+    getline(levelFile, tmp, '\n');
+
+    char** floor = new char* [sizeH];
+    for (int i = 0; i < sizeH; i++) {
+        floor[i] = new char[sizeW];
+    }
+
+    for (int i = 0; i < sizeH; i++) {
+        for (int j = 0; j < sizeW; j++) {
+            getline(levelFile, tmp, ';');
+            textChar = tmp[0];
+            floor[i][j] = textChar;
+        }
+        getline(levelFile, tmp, '\n');
+    }
+
+    print_map(floor);
+
+    //STAGE
+    getline(levelFile, tmp, ';');
+
+    if (tmp != "STAGE") {
+        cout << "ERROR 10: nivel mal formado." << endl;
+        return 8;
+    }
+    cout << tmp << endl;
+    getline(levelFile, tmp, '\n');
+
+    char** stage = new char* [sizeH];
+    for (int i = 0; i < sizeH; i++) {
+        stage[i] = new char[sizeW];
+    }
+
+    for (int i = 0; i < sizeH; i++) {
+        for (int j = 0; j < sizeW; j++) {
+            getline(levelFile, tmp, ';');
+            textChar = tmp[0];
+            stage[i][j] = textChar;
+        }
+        getline(levelFile, tmp, '\n');
+    }
+
+    print_map(stage);
+    //COLLISIONS
+    getline(levelFile, tmp, ';');
+
+    if (tmp != "COLLISIONS") {
+        cout << "ERROR 10: colisiones mal formadas." << endl;
+        return 8;
+    }
+    cout << tmp << endl;
+    getline(levelFile, tmp, '\n');
+
+    char** collisions = new char* [sizeH];
+    for (int i = 0; i < sizeH; i++) {
+        collisions[i] = new char[sizeW];
+    }
+
+    for (int i = 0; i < sizeH; i++) {
+        for (int j = 0; j < sizeW; j++) {
+            getline(levelFile, tmp, ';');
+            textChar = tmp[0];
+            collisions[i][j] = textChar;
+        }
+        getline(levelFile, tmp, '\n');
+    }
+
+    print_map(collisions);
+    //OBJECTS
+    getline(levelFile, tmp, ';');
+
+    if (tmp != "OBJECTS") {
+        cout << "ERROR 10: objetos mal formados." << endl;
+        return 8;
+    }
+    cout << tmp << endl;
+    getline(levelFile, tmp, '\n');
+
+    char** objects = new char* [sizeH];
+    for (int i = 0; i < sizeH; i++) {
+        objects[i] = new char[sizeW];
+    }
+
+    for (int i = 0; i < sizeH; i++) {
+        for (int j = 0; j < sizeW; j++) {
+            getline(levelFile, tmp, ';');
+            textChar = tmp[0];
+            objects[i][j] = textChar;
+        }
+        getline(levelFile, tmp, '\n');
+    }
+
+    print_map(objects);
     
 
     levelFile.close();
