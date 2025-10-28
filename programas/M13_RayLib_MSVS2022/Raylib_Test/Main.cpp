@@ -33,6 +33,9 @@ int minSize = 2;
 int sizeW = -1;
 int sizeH = -1;
 
+int playerX = -1;
+int playerY = -1;
+
 int minTexture = 1;
 int fileTextures = -1;
 
@@ -41,6 +44,7 @@ string textName;
 
 map<char, string> textureFile;
 map<char, Texture2D> textures;
+map<char, Model> models;
 
 char** level_floor;
 char** level_stage;
@@ -84,13 +88,25 @@ int entierro(char** floor)
 
     Vector3 cubePosition = { cubeInitX, 0.0f, cubeInitZ};
 
-    //CARGAR TEXTURAS
     for (map<char, string>::iterator it = textureFile.begin(); it != textureFile.end(); ++it) {
-        Texture2D texture = LoadTexture(it->second.c_str());
+        Texture2D t = LoadTexture(it->second.c_str());
 
-        textures.insert({ it->first, texture });
+        Mesh mesh = GenMeshCube(cubeSize, cubeSize, cubeSize);
+        Model m = LoadModelFromMesh(mesh);
+        m.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = t;
+
+        models.insert({ it->first, m });
     }
     
+    // Find player position in level_objects
+    for (int h = 0; h < sizeH; h++) {
+        for (int w = 0; w < sizeW; w++) {
+            if (level_objects[h][w] == '@') {
+                playerX = w;
+                playerY = h;
+            }
+        }
+    }
 
     SetTargetFPS(60);               // Set our game to run at 60 frames-per-second
     //--------------------------------------------------------------------------------------
@@ -99,9 +115,19 @@ int entierro(char** floor)
     while (!WindowShouldClose())    // Detect window close button or ESC key
     {
         // Update
-        //----------------------------------------------------------------------------------
-        // TODO: Update your variables here
-        //----------------------------------------------------------------------------------
+        // Movimiento del jugador (WASD y flechas)
+        if (IsKeyPressed(KEY_W) || IsKeyPressed(KEY_UP)) {
+            if (playerY > 0 && level_collisions[playerY - 1][playerX] == '0') playerY--;
+        }
+        if (IsKeyPressed(KEY_S) || IsKeyPressed(KEY_DOWN)) {
+            if (playerY < sizeH - 1 && level_collisions[playerY + 1][playerX] == '0') playerY++;
+        }
+        if (IsKeyPressed(KEY_A) || IsKeyPressed(KEY_LEFT)) {
+            if (playerX > 0 && level_collisions[playerY][playerX - 1] == '0') playerX--;
+        }
+        if (IsKeyPressed(KEY_D) || IsKeyPressed(KEY_RIGHT)) {
+            if (playerX < sizeW - 1 && level_collisions[playerY][playerX + 1] == '0') playerX++;
+        }
 
         // Draw
         //----------------------------------------------------------------------------------
@@ -115,11 +141,83 @@ int entierro(char** floor)
 
         DrawGrid(10, 1.0f);
 
+
+        // Draw Floor
+        cubePosition = { cubeInitX, 0.0f, cubeInitZ };
         for (int h = 0; h < sizeH; h++) {
+            cubePosition.x = cubeInitX;
             for (int w = 0; w < sizeW; w++) {
-                if (floor[h][w] != '0') {
-                    DrawCube(cubePosition, cubeSize, cubeSize, cubeSize, RED);
-                    DrawCubeWires(cubePosition, cubeSize, cubeSize, cubeSize, GREEN);
+                char floorKey = floor[h][w];
+
+                if (floorKey != '0') {
+                    if (models.find(floorKey) != models.end()) {
+                        DrawModel(models[floorKey], cubePosition, 1.0f, WHITE);
+                    }
+                    else {
+                        // Fallback: si no hay textura, usar color verde
+                        DrawCube(cubePosition, cubeSize, cubeSize, cubeSize, GREEN);
+                    }
+                    DrawCubeWires(cubePosition, cubeSize, cubeSize, cubeSize, BLACK);
+                }
+
+                cubePosition.x += cubeSize;
+            }
+            cubePosition.z += cubeSize;
+        }
+
+        // Draw Stage (y+1)
+        cubePosition = { cubeInitX, 1.0f, cubeInitZ };
+        for (int h = 0; h < sizeH; h++) {
+            cubePosition.x = cubeInitX;
+            for (int w = 0; w < sizeW; w++) {
+                if (level_stage[h][w] != '0') {
+                    char texKey = level_stage[h][w];
+
+                    if (models.find(texKey) != models.end()) {
+                        DrawModel(models[texKey], cubePosition, 1.0f, WHITE);
+                    }
+                    else {
+                        // Fallback: si no hay textura, usar color genérico
+                        DrawCube(cubePosition, cubeSize, cubeSize, cubeSize, GRAY);
+                    }
+
+                    DrawCubeWires(cubePosition, cubeSize, cubeSize, cubeSize, BLACK);
+                }
+                cubePosition.x += cubeSize;
+            }
+            cubePosition.z += cubeSize;
+        }
+
+        
+        // Draw Player (y+1)
+        if (playerX != -1 && playerY != -1) {
+            float playerRadius = 0.5f;
+            Vector3 playerPos = {
+                cubeInitX + playerX * cubeSize,
+                1.0f,
+                cubeInitZ + playerY * cubeSize
+            };
+
+            DrawSphere(playerPos, playerRadius, RED);
+            DrawModel(models['@'], playerPos, 1.0f, WHITE);
+        }
+
+        // Draw Coffins and Pitholes (y+1)
+        cubePosition = { cubeInitX, 1.f, cubeInitZ };
+        for (int h = 0; h < sizeH; h++) {
+            cubePosition.x = cubeInitX;
+            for (int w = 0; w < sizeW; w++) {
+                char objKey = level_objects[h][w];
+                if (objKey != '0' && objKey != '@') {   // <-- ignorar el player
+                    if (models.find(objKey) != models.end()) {
+                        DrawModel(models[objKey], cubePosition, 1.0f, WHITE);
+                    }
+                    else {
+                        // Fallback: color genérico según tipo
+                        if (objKey == 'C') DrawCube(cubePosition, cubeSize, cubeSize, cubeSize, BROWN);
+                        if (objKey == 'P') DrawCube(cubePosition, cubeSize, cubeSize, cubeSize, DARKGRAY);
+                    }
+                    DrawCubeWires(cubePosition, cubeSize, cubeSize, cubeSize, BLACK);
                 }
                 cubePosition.x += cubeSize;
             }
@@ -135,7 +233,10 @@ int entierro(char** floor)
         EndDrawing();
         //----------------------------------------------------------------------------------
     }
-
+	//liberar modelos
+    for (auto& m : models) {
+        UnloadModel(m.second);
+    }
     // De-Initialization
     //--------------------------------------------------------------------------------------
     CloseWindow();        // Close window and OpenGL context
