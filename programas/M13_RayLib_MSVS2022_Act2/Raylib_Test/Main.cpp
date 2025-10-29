@@ -15,6 +15,7 @@
 
 #include "raylib.h"
 
+#include <vector>
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -52,7 +53,42 @@ char** level_collisions;
 char** level_objects;
 
 
+bool canMoveTo(int x, int y, bool isPlayer) {
+    int maxY = sizeH;
+    int maxX = sizeW;
+    if (maxY == 0 || maxX == 0) return false;
 
+    if (x < 0 || y < 0 || y >= maxY || x >= maxX)
+        return false;
+
+    if (isPlayer) {
+        return level_collisions[y][x] == '0';
+    }
+    else if (!isPlayer){
+        return level_collisions[y][x] != 'X';
+    }
+}
+
+bool tryMoveCoffin(int playerX, int playerY, int dx, int dy) {
+    int targetX = playerX + dx;
+    int targetY = playerY + dy;
+    int pushX = targetX + dx;
+    int pushY = targetY + dy;
+
+    if (targetY < 0 || targetY >= sizeH || targetX < 0 || targetX >= sizeW)
+        return false;
+
+    if (level_objects[targetY][targetX] == 'C') {
+        if (canMoveTo(pushX, pushY, false) && level_objects[pushY][pushX] == '0') {
+            level_objects[pushY][pushX] = 'C';
+            level_objects[targetY][targetX] = '0';
+            return true;
+        }
+        return false; 
+    }
+
+    return true; 
+}
 
 
 int entierro(char** floor)
@@ -66,7 +102,7 @@ int entierro(char** floor)
 
     // Define the camera to look into our 3d world
     Camera3D camera = { 0 };
-    camera.position = Vector3{ 0.0f, 10.0f, 10.0f };  // Camera position
+    camera.position = Vector3{ 0.0f, 12.0f, 1.0f };  // Camera position
     camera.target = Vector3{ 0.0f, 0.0f, 0.0f };      // Camera looking at point
     camera.up = Vector3{ 0.0f, 1.0f, 0.0f };          // Camera up vector (rotation towards target)
     camera.fovy = 45.0f;                                // Camera field-of-view Y
@@ -117,18 +153,30 @@ int entierro(char** floor)
         // Update
         // Movimiento del jugador (WASD y flechas)
         if (IsKeyPressed(KEY_W) || IsKeyPressed(KEY_UP)) {
-            if (playerY > 0 && level_collisions[playerY - 1][playerX] == '0') playerY--;
+            int dx = 0, dy = -1;
+            if (tryMoveCoffin(playerX, playerY, dx, dy) && canMoveTo(playerX + dx, playerY + dy, true))
+                playerY += dy;
         }
         if (IsKeyPressed(KEY_S) || IsKeyPressed(KEY_DOWN)) {
-            if (playerY < sizeH - 1 && level_collisions[playerY + 1][playerX] == '0') playerY++;
+            int dx = 0, dy = 1;
+            if (tryMoveCoffin(playerX, playerY, dx, dy) && canMoveTo(playerX + dx, playerY + dy, true))
+                playerY += dy;
         }
+        
         if (IsKeyPressed(KEY_A) || IsKeyPressed(KEY_LEFT)) {
-            if (playerX > 0 && level_collisions[playerY][playerX - 1] == '0') playerX--;
+            int dx = -1, dy = 0;
+            if (tryMoveCoffin(playerX, playerY, dx, dy) && canMoveTo(playerX + dx, playerY + dy, true))
+                playerX += dx;
         }
+        
         if (IsKeyPressed(KEY_D) || IsKeyPressed(KEY_RIGHT)) {
-            if (playerX < sizeW - 1 && level_collisions[playerY][playerX + 1] == '0') playerX++;
+            int dx = 1, dy = 0;
+            if (tryMoveCoffin(playerX, playerY, dx, dy) && canMoveTo(playerX + dx, playerY + dy, true))
+                playerX += dx;
         }
-
+        
+        
+        
         // Draw
         //----------------------------------------------------------------------------------
         BeginDrawing();
@@ -150,13 +198,8 @@ int entierro(char** floor)
                 char floorKey = floor[h][w];
 
                 if (floorKey != '0') {
-                    if (models.find(floorKey) != models.end()) {
                         DrawModel(models[floorKey], cubePosition, 1.0f, WHITE);
-                    }
-                    else {
-                        // Fallback: si no hay textura, usar color verde
-                        DrawCube(cubePosition, cubeSize, cubeSize, cubeSize, GREEN);
-                    }
+                    
                     DrawCubeWires(cubePosition, cubeSize, cubeSize, cubeSize, BLACK);
                 }
 
@@ -172,15 +215,8 @@ int entierro(char** floor)
             for (int w = 0; w < sizeW; w++) {
                 if (level_stage[h][w] != '0') {
                     char texKey = level_stage[h][w];
-
-                    if (models.find(texKey) != models.end()) {
-                        DrawModel(models[texKey], cubePosition, 1.0f, WHITE);
-                    }
-                    else {
-                        // Fallback: si no hay textura, usar color genérico
-                        DrawCube(cubePosition, cubeSize, cubeSize, cubeSize, GRAY);
-                    }
-
+                    
+                    DrawModel(models[texKey], cubePosition, 1.0f, WHITE);
                     DrawCubeWires(cubePosition, cubeSize, cubeSize, cubeSize, BLACK);
                 }
                 cubePosition.x += cubeSize;
@@ -202,21 +238,14 @@ int entierro(char** floor)
             DrawModel(models['@'], playerPos, 1.0f, WHITE);
         }
 
-        // Draw Coffins and Pitholes (y+1)
+        // Draw Coffins(y+1)
         cubePosition = { cubeInitX, 1.f, cubeInitZ };
         for (int h = 0; h < sizeH; h++) {
             cubePosition.x = cubeInitX;
             for (int w = 0; w < sizeW; w++) {
                 char objKey = level_objects[h][w];
-                if (objKey != '0' && objKey != '@') {   // <-- ignorar el player
-                    if (models.find(objKey) != models.end()) {
-                        DrawModel(models[objKey], cubePosition, 1.0f, WHITE);
-                    }
-                    else {
-                        // Fallback: color genérico según tipo
-                        if (objKey == 'C') DrawCube(cubePosition, cubeSize, cubeSize, cubeSize, BROWN);
-                        if (objKey == 'P') DrawCube(cubePosition, cubeSize, cubeSize, cubeSize, DARKGRAY);
-                    }
+                if (objKey != '0' && objKey != '@') {
+                    DrawModel(models[objKey], cubePosition, 1.0f, WHITE);
                     DrawCubeWires(cubePosition, cubeSize, cubeSize, cubeSize, BLACK);
                 }
                 cubePosition.x += cubeSize;
@@ -244,6 +273,7 @@ int entierro(char** floor)
 
     return 0;
 }
+
 
 
 void  print_map(char** map) {
