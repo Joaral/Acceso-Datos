@@ -52,6 +52,7 @@ char** level_stage;
 char** level_collisions;
 char** level_objects;
 
+int score = 3;
 
 bool canMoveTo(int x, int y, bool isPlayer) {
     int maxY = sizeH;
@@ -82,6 +83,12 @@ bool tryMoveCoffin(int playerX, int playerY, int dx, int dy) {
         if (canMoveTo(pushX, pushY, false) && level_objects[pushY][pushX] == '0') {
             level_objects[pushY][pushX] = 'C';
             level_objects[targetY][targetX] = '0';
+
+            if (level_collisions[pushY][pushX] == 'S') {
+                level_floor[pushY][pushX] = 'C';
+                level_objects[pushY][pushX] = '0';
+                score--;
+            }
             return true;
         }
         return false; 
@@ -144,14 +151,17 @@ int entierro(char** floor)
         }
     }
 
-    SetTargetFPS(60);               // Set our game to run at 60 frames-per-second
+    SetTargetFPS(60); // Set our game to run at 60 frames-per-second
     //--------------------------------------------------------------------------------------
-
+    float timer;
     // Main game loop
     while (!WindowShouldClose())    // Detect window close button or ESC key
     {
         // Update
         // Movimiento del jugador (WASD y flechas)
+        if(score != 0) 
+            timer = GetTime();
+
         if (IsKeyPressed(KEY_W) || IsKeyPressed(KEY_UP)) {
             int dx = 0, dy = -1;
             if (tryMoveCoffin(playerX, playerY, dx, dy) && canMoveTo(playerX + dx, playerY + dy, true))
@@ -255,7 +265,14 @@ int entierro(char** floor)
 
         EndMode3D();
 
-        DrawText("Welcome to the third dimension!", 10, 40, 20, DARKGRAY);
+        if (score == 0) {
+            DrawText("Enterradas! YOU WIN", 10, 40, 20, DARKGRAY);
+            DrawText(TextFormat("%.2f", timer), 10, 60, 20, DARKGRAY);
+        }
+        else {
+            DrawText("Entierramelas Todas!", 10, 40, 20, DARKGRAY);
+            DrawText(TextFormat("%.2f",timer), 10, 60, 20, DARKGRAY);
+        }
 
         DrawFPS(10, 10);
 
