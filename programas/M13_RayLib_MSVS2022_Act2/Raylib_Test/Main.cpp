@@ -42,7 +42,7 @@ int fileTextures = -1;
 
 char textChar;
 string textName;
-string level = "Fourth_level.erro";
+string level = "Third_level.erro";
 
 map<char, string> textureFile;
 map<char, Texture2D> textures;
