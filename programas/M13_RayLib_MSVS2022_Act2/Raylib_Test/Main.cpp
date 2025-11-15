@@ -24,7 +24,7 @@
 
 using namespace std;
 
-float curVersion = 0.5;
+float curVersion = 0.6;
 float minVersion = 0.3;
 
 float fileVersion = -1.0;
@@ -42,6 +42,7 @@ int fileTextures = -1;
 
 char textChar;
 string textName;
+string level = "Fourth_level.erro";
 
 map<char, string> textureFile;
 map<char, Texture2D> textures;
@@ -51,6 +52,10 @@ char** level_floor;
 char** level_stage;
 char** level_collisions;
 char** level_objects;
+
+string musicFile = "";
+Music gameMusic;
+bool musicLoaded = false;
 
 int score = 3;
 
@@ -107,9 +112,19 @@ int entierro(char** floor)
 
     InitWindow(screenWidth, screenHeight, "raylib [core] example - 3d camera mode");
 
+	// Logica para añadir la musica
+    InitAudioDevice();
+
+    if (fileVersion >= 0.6f && musicFile != "")
+    {
+        gameMusic = LoadMusicStream(musicFile.c_str());
+        PlayMusicStream(gameMusic);
+        musicLoaded = true;
+    }
+
     // Define the camera to look into our 3d world
     Camera3D camera = { 0 };
-    camera.position = Vector3{ 0.0f, 12.0f, 1.0f };  // Camera position
+    camera.position = Vector3{ 0.0f, 20.0f, 1.0f };  // Camera position
     camera.target = Vector3{ 0.0f, 0.0f, 0.0f };      // Camera looking at point
     camera.up = Vector3{ 0.0f, 1.0f, 0.0f };          // Camera up vector (rotation towards target)
     camera.fovy = 45.0f;                                // Camera field-of-view Y
@@ -158,6 +173,10 @@ int entierro(char** floor)
     while (!WindowShouldClose())    // Detect window close button or ESC key
     {
         // Update
+        // 
+		// Musica si se ha cargado
+        if (musicLoaded) UpdateMusicStream(gameMusic);
+
         // Movimiento del jugador (WASD y flechas)
         if(score != 0) 
             timer = GetTime();
@@ -249,6 +268,7 @@ int entierro(char** floor)
         }
 
         // Draw Coffins(y+1)
+		int numCoffins = 0;
         cubePosition = { cubeInitX, 1.f, cubeInitZ };
         for (int h = 0; h < sizeH; h++) {
             cubePosition.x = cubeInitX;
@@ -257,11 +277,13 @@ int entierro(char** floor)
                 if (objKey != '0' && objKey != '@') {
                     DrawModel(models[objKey], cubePosition, 1.0f, WHITE);
                     DrawCubeWires(cubePosition, cubeSize, cubeSize, cubeSize, BLACK);
+					numCoffins++;
                 }
                 cubePosition.x += cubeSize;
             }
             cubePosition.z += cubeSize;
         }
+		score = numCoffins;
 
         EndMode3D();
 
@@ -279,10 +301,14 @@ int entierro(char** floor)
         EndDrawing();
         //----------------------------------------------------------------------------------
     }
-	//liberar modelos
+	//liberar modelos y musica
     for (auto& m : models) {
         UnloadModel(m.second);
     }
+
+    if (musicLoaded) UnloadMusicStream(gameMusic);
+    CloseAudioDevice();
+
     // De-Initialization
     //--------------------------------------------------------------------------------------
     CloseWindow();        // Close window and OpenGL context
@@ -304,7 +330,7 @@ void  print_map(char** map) {
 
 int main()
 {
-    ifstream levelFile("First_level.erro");
+    ifstream levelFile(level);
 
     if (!levelFile.is_open()) {
         cout << "ERROR 1: El archivo no existe" << endl;
@@ -352,7 +378,36 @@ int main()
 
     getline(levelFile, tmp, '\n');
 
-    getline(levelFile, tmp, ';');
+    
+
+	// Musica para 0.6 o superior
+    if (fileVersion >= 0.6f)
+    {
+        getline(levelFile, tmp, ';');
+        if (tmp != "MUSIC")
+        {
+            cout << "ERROR 9: Falta la línea MUSIC en versiones 0.6 o superiores." << endl;
+            return 9;
+        }
+
+        getline(levelFile, tmp, ';');
+        musicFile = tmp;
+
+        if (musicFile == "" || musicFile == "NULL") {
+            cout << "WARNING: Archivo de música inválido, no se cargará música." << endl;
+        }
+
+        getline(levelFile, tmp, '\n');
+    }
+    else
+    {
+        // Si el archivo es 0.5 o anterior, seguimos normalmente
+        cout << "Archivo sin música (versión antigua)." << endl;
+    }
+
+	getline(levelFile, tmp, ';');
+
+	// Tamaño
 
     if (tmp != "SIZE") {
         cout << "ERROR 6: la cabecera del tamaño es erronea." << endl;
